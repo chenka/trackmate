@@ -79,10 +79,19 @@ function App() {
     setTaskHistory(data)
   })
 
-  const formatDuration = (duration: number): string => {
-    const hours = Math.floor(duration / 3600)
-    const minutes = Math.floor((duration % 3600) / 60)
-    const seconds = duration % 60
+  function getDuration(
+    startTime: Date,
+    endTime: Date,
+    unit: "seconds" | "minutes"
+  ): number {
+    const duration = (endTime.getTime() - startTime.getTime()) / 1000
+    return Math.floor(unit === "seconds" ? duration : duration / 60)
+  }
+
+  const formatDuration = (durationInSeconds: number): string => {
+    const hours = Math.floor(durationInSeconds / 3600)
+    const minutes = Math.floor((durationInSeconds % 3600) / 60)
+    const seconds = durationInSeconds % 60
     return `[${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}]`
@@ -94,8 +103,11 @@ function App() {
     tasks.forEach((task) => {
       const client = clients().find((c) => c.id === task.clientId)
       const project = projects().find((p) => p.id === task.projectId)
+
       const duration = formatDuration(
-        new Date(task.endTime).getTime() - new Date(task.startTime).getTime()
+        (new Date(task.endTime).getTime() -
+          new Date(task.startTime).getTime()) /
+          1000
       )
       taskHistoryEntries.push({
         clientName: client ? client.name : "",
@@ -103,12 +115,13 @@ function App() {
         id: task.id,
         name: task.name,
         duration: duration,
-        startTime: new Date(task.startTime).toLocaleString(),
-        endTime: new Date(task.endTime).toLocaleString(),
+        startTime: task.startTime,
+        endTime: task.endTime,
         billable: project?.billable || false,
         billableRate: project?.billableRate || 0,
       })
     })
+
     return taskHistoryEntries
   }
 
@@ -234,8 +247,10 @@ function App() {
       const tasks = groupedData[key]
       const taskCount = tasks.length
       const totalDuration = getTaskHisotryEntries().reduce((sum, task) => {
-        const durationMinutes = parseInt(
-          task.duration.slice(1, -1).split(":").join("")
+        const durationMinutes = getDuration(
+          new Date(task.startTime),
+          new Date(task.endTime),
+          "seconds"
         )
 
         return sum + durationMinutes
@@ -243,9 +258,12 @@ function App() {
 
       const totalAmount = getTaskHisotryEntries().reduce((sum, task) => {
         const billableRate = task ? task.billableRate : 0
-        const durationMinutes = parseInt(
-          task.duration.slice(1, -1).split(":").join("")
+        const durationMinutes = getDuration(
+          new Date(task.startTime),
+          new Date(task.endTime),
+          "minutes"
         )
+
         return sum + billableRate * (durationMinutes / 60)
       }, 0)
 
