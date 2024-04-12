@@ -229,52 +229,54 @@ function App() {
   // Report generation
   const generateReportData = (): ReportEntry[] => {
     const reportData: ReportEntry[] = []
-    const groupedData: { [key: string]: Task[] } = {}
+    const groupedData: {
+      [key: string]: { [key: string]: TaskHistoryEntry[] }
+    } = {}
 
     getTaskHisotryEntries().forEach((task) => {
-      const key = task.clientName
-        ? `${task.clientName}-${task.projectName}`
-        : ""
-      if (key) {
-        if (!groupedData[key]) {
-          groupedData[key] = []
-        }
-        groupedData[key].push(task)
+      const clientKey = task.clientName || ""
+      const projectKey = task.projectName || ""
+      if (!groupedData[clientKey]) {
+        groupedData[clientKey] = {}
       }
+      if (!groupedData[clientKey][projectKey]) {
+        groupedData[clientKey][projectKey] = []
+      }
+      groupedData[clientKey][projectKey].push(task)
     })
 
-    for (const key in groupedData) {
-      const tasks = groupedData[key]
-      const taskCount = tasks.length
-      const totalDuration = getTaskHisotryEntries().reduce((sum, task) => {
-        const durationMinutes = getDuration(
-          new Date(task.startTime),
-          new Date(task.endTime),
-          "seconds"
-        )
+    for (const clientKey in groupedData) {
+      for (const projectKey in groupedData[clientKey]) {
+        const tasks = groupedData[clientKey][projectKey]
+        const taskCount = tasks.length
+        const totalDuration = tasks.reduce((sum, task) => {
+          const durationMinutes = getDuration(
+            new Date(task.startTime),
+            new Date(task.endTime),
+            "seconds"
+          )
+          return sum + durationMinutes
+        }, 0)
 
-        return sum + durationMinutes
-      }, 0)
+        const totalAmount = tasks.reduce((sum, task) => {
+          const billableRate = task ? task.billableRate : 0
 
-      const totalAmount = getTaskHisotryEntries().reduce((sum, task) => {
-        const billableRate = task ? task.billableRate : 0
-        const durationMinutes = getDuration(
-          new Date(task.startTime),
-          new Date(task.endTime),
-          "minutes"
-        )
+          const durationMinutes = getDuration(
+            new Date(task.startTime),
+            new Date(task.endTime),
+            "minutes"
+          )
+          return sum + billableRate * (durationMinutes / 60)
+        }, 0)
 
-        return sum + billableRate * (durationMinutes / 60)
-      }, 0)
-
-      const [clientName, projectName] = key.split("-")
-      reportData.push({
-        clientName,
-        projectName,
-        taskCount,
-        totalDuration: formatDuration(totalDuration),
-        totalAmount: Math.round(totalAmount * 100) / 100,
-      })
+        reportData.push({
+          clientName: clientKey,
+          projectName: projectKey,
+          taskCount,
+          totalDuration: formatDuration(totalDuration),
+          totalAmount: Math.round(totalAmount * 100) / 100,
+        })
+      }
     }
 
     return reportData
@@ -454,7 +456,7 @@ function App() {
                 <li class="mb-2">
                   {task.clientName} - {task.projectName} - {task.name}:{" "}
                   {task.duration} (from {task.startTime} to {task.endTime}){" "}
-                  {task.billable ? `(Billable)` : ""}
+                  {task.billable ? `💰` : ""}
                 </li>
               )}
             </For>
@@ -478,7 +480,7 @@ function App() {
 const Report = (props: { reportData: ReportEntry[] }) => {
   return (
     <div class="mt-8">
-      <h3 class="mb-4 text-xl font-bold">Report</h3>
+      <h3 class="mb-4 text-xl font-bold">Report by project</h3>
       <table class="w-full table-auto">
         <thead>
           <tr>
