@@ -1,5 +1,5 @@
 {
-  "productName": "time-tracker-2",
+  "productName": "time-tracker",
   "version": "0.0.0",
   "identifier": "com.tauri.dev",
   "build": {
@@ -8,15 +8,20 @@
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
-  "app": {"windows": [
+  "app": {
+    "windows": [
       {
-        "title": "time-tracker-2",
-        "width": 800,
-        "height": 600
+        "title": "time-tracker",
+        "width": 1200,
+        "height": 1000
       }
     ],
     "security": {
       "csp": null
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "id": "timer-main"
     }
   },
   "bundle": {
