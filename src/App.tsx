@@ -1,11 +1,25 @@
 import { createSignal, onCleanup, For } from "solid-js"
 import { TrayIcon } from "@tauri-apps/api/tray"
 import {} from "@tauri-apps/api/app"
+import {
+  Client,
+  Project,
+  Task,
+  createClient,
+  createProject,
+  createTask,
+  generateID,
+  getClients,
+  getProjects,
+  getTasks,
+  resetDatabase,
+} from "./store"
 // Type definitions
 type TaskHistoryEntry = {
+  id: string
+  name: string
   clientName: string
   projectName: string
-  taskName: string
   duration: string
   startTime: string
   endTime: string
@@ -21,16 +35,6 @@ type ReportEntry = {
   totalAmount: number
 }
 
-type ProjectEntry = {
-  name: string
-  clientName: string
-  billable: boolean
-  billableRate: number
-}
-
-type ClientEntry = {
-  name: string
-}
 const formatTime = (time: number): string => {
   const hours = Math.floor(time / 3600)
   const minutes = Math.floor((time % 3600) / 60)
@@ -50,24 +54,30 @@ function App() {
   const [taskName, setTaskName] = createSignal<string>("")
   const [currentTask, setCurrentTask] = createSignal<string>("")
   const [startTime, setStartTime] = createSignal<Date>(new Date())
-  const [taskHistory, setTaskHistory] = createSignal<TaskHistoryEntry[]>([])
-  const [projects, setProjects] = createSignal<ProjectEntry[]>([])
-  const [clients, setClients] = createSignal<ClientEntry[]>([])
+  const [taskHistory, setTaskHistory] = createSignal<Task[]>([])
+  const [projects, setProjects] = createSignal<Project[]>([])
+  const [clients, setClients] = createSignal<Client[]>([])
   const [newProjectName, setNewProjectName] = createSignal<string>("")
-  const [newProjectClient, setNewProjectClient] = createSignal<string>("")
+  const [newProjectClientId, setNewProjectClientId] = createSignal<string>("")
   const [newProjectBillable, setNewProjectBillable] =
     createSignal<boolean>(false)
   const [newProjectBillableRate, setNewProjectBillableRate] =
     createSignal<number>(0)
   const [newClientName, setNewClientName] = createSignal<string>("")
 
-  // Utility functions
-  const formatDate = (date: Date): string => {
-    return `${date.getHours().toString().padStart(2, "0")}:${date
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}:${date.getSeconds().toString().padStart(2, "0")}`
-  }
+  getClients().then((data) => {
+    console.log("client", data)
+    setClients(data)
+  })
+  getProjects().then((data) => {
+    console.log("projects", data)
+
+    setProjects(data)
+  })
+  getTasks().then((data) => {
+    console.log("tasks", data)
+    setTaskHistory(data)
+  })
 
   const formatDuration = (duration: number): string => {
     const hours = Math.floor(duration / 3600)
@@ -76,6 +86,30 @@ function App() {
     return `[${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}]`
+  }
+
+  const getTaskHisotryEntries = (): TaskHistoryEntry[] => {
+    const tasks = taskHistory()
+    const taskHistoryEntries: TaskHistoryEntry[] = []
+    tasks.forEach((task) => {
+      const client = clients().find((c) => c.id === task.clientId)
+      const project = projects().find((p) => p.id === task.projectId)
+      const duration = formatDuration(
+        new Date(task.endTime).getTime() - new Date(task.startTime).getTime()
+      )
+      taskHistoryEntries.push({
+        clientName: client ? client.name : "",
+        projectName: project ? project.name : "",
+        id: task.id,
+        name: task.name,
+        duration: duration,
+        startTime: new Date(task.startTime).toLocaleString(),
+        endTime: new Date(task.endTime).toLocaleString(),
+        billable: project?.billable || false,
+        billableRate: project?.billableRate || 0,
+      })
+    })
+    return taskHistoryEntries
   }
 
   // Timer functions
@@ -99,27 +133,26 @@ function App() {
     setTimerId(id)
   }
 
-  const stopTimer = (): void => {
-    trayIcon()?.close()
+  const stopTimer = async (): Promise<void> => {
+    if (trayIcon()) {
+      await trayIcon()?.close()
+    }
     const duration = time()
     const endTime = new Date(startTime().getTime() + duration * 1000)
     clearInterval(timerId() as number)
     const selectedProjectData = projects().find(
       (project) => project.name === selectedProject()
     )
-    setTaskHistory((currentHistory) => [
-      ...currentHistory,
-      {
-        clientName: selectedClient(),
-        projectName: selectedProject(),
-        taskName: currentTask(),
-        duration: formatDuration(duration),
-        startTime: formatDate(startTime()),
-        endTime: formatDate(endTime),
-        billable: selectedProjectData?.billable || false,
-        billableRate: selectedProjectData?.billableRate || 0,
-      },
-    ])
+    await createTask({
+      id: generateID(),
+      name: currentTask(),
+      startTime: startTime().toISOString(),
+      endTime: endTime.toISOString(),
+      clientId: selectedProjectData?.clientId || "",
+      projectId: selectedProjectData?.id || "",
+    })
+    const tasks = await getTasks()
+    setTaskHistory(tasks)
     setTimerId(null)
     setCurrentTask("")
     setTime(0)
@@ -147,73 +180,80 @@ function App() {
   }
 
   // Project and client functions
-  const addProject = (): void => {
+  const addProject = async (): Promise<void> => {
     if (!newProjectName().trim()) {
       alert("Please enter a project name.")
       return
     }
-    setProjects((currentProjects) => [
-      ...currentProjects,
-      {
-        name: newProjectName(),
-        clientName: newProjectClient(),
-        billable: newProjectBillable(),
-        billableRate: newProjectBillableRate(),
-      },
-    ])
+    const project: Project = {
+      name: newProjectName(),
+      clientId: newProjectClientId(),
+      billable: newProjectBillable(),
+      billableRate: newProjectBillableRate(),
+      id: generateID(),
+    }
+    await createProject(project)
+    const projectsArray = await getProjects()
+    setProjects(projectsArray)
+
     setNewProjectName("")
-    setNewProjectClient("")
+    setNewProjectClientId("")
     setNewProjectBillable(false)
     setNewProjectBillableRate(0)
   }
 
-  const addClient = (): void => {
+  const addClient = async (): Promise<void> => {
     if (!newClientName().trim()) {
       alert("Please enter a client name.")
       return
     }
-    setClients((currentClients) => [
-      ...currentClients,
-      {
-        name: newClientName(),
-      },
-    ])
+    await createClient({ name: newClientName(), id: generateID() })
+    const clients = await getClients()
+    setClients(clients)
     setNewClientName("")
   }
 
   // Report generation
   const generateReportData = (): ReportEntry[] => {
     const reportData: ReportEntry[] = []
-    const groupedData: { [key: string]: TaskHistoryEntry[] } = {}
+    const groupedData: { [key: string]: Task[] } = {}
 
-    taskHistory().forEach((task) => {
-      const key = `${task.clientName}-${task.projectName}`
-      if (!groupedData[key]) {
-        groupedData[key] = []
+    getTaskHisotryEntries().forEach((task) => {
+      const key = task.clientName
+        ? `${task.clientName}-${task.projectName}`
+        : ""
+      if (key) {
+        if (!groupedData[key]) {
+          groupedData[key] = []
+        }
+        groupedData[key].push(task)
       }
-      groupedData[key].push(task)
     })
 
     for (const key in groupedData) {
       const tasks = groupedData[key]
-      const taskCount = tasks.length // Get the count of tasks for the project
-      const totalDuration = tasks.reduce(
-        (sum, task) =>
-          sum + parseInt(task.duration.slice(1, -1).split(":").join("")),
-        0
-      )
-      const totalAmount = tasks.reduce(
-        (sum, task) =>
-          sum +
-          (task.billable ? task.billableRate * (totalDuration / 3600) : 0),
-        0
-      )
+      const taskCount = tasks.length
+      const totalDuration = getTaskHisotryEntries().reduce((sum, task) => {
+        const durationMinutes = parseInt(
+          task.duration.slice(1, -1).split(":").join("")
+        )
+
+        return sum + durationMinutes
+      }, 0)
+
+      const totalAmount = getTaskHisotryEntries().reduce((sum, task) => {
+        const billableRate = task ? task.billableRate : 0
+        const durationMinutes = parseInt(
+          task.duration.slice(1, -1).split(":").join("")
+        )
+        return sum + billableRate * (durationMinutes / 60)
+      }, 0)
 
       const [clientName, projectName] = key.split("-")
       reportData.push({
         clientName,
         projectName,
-        taskCount, // Add the task count to the report entry
+        taskCount,
         totalDuration: formatDuration(totalDuration),
         totalAmount: Math.round(totalAmount * 100) / 100,
       })
@@ -255,7 +295,7 @@ function App() {
           >
             <option value="">Select a client</option>
             <For each={clients()}>
-              {(client: ClientEntry) => (
+              {(client: Client) => (
                 <option value={client.name}>{client.name}</option>
               )}
             </For>
@@ -269,7 +309,7 @@ function App() {
           >
             <option value="">Select a project</option>
             <For each={projects()}>
-              {(project: ProjectEntry) => (
+              {(project: Project) => (
                 <option value={project.name}>{project.name}</option>
               )}
             </For>
@@ -313,15 +353,15 @@ function App() {
               <label class="mb-2 block font-bold">Client (Optional)</label>
               <select
                 class="mb-4 w-full rounded border border-gray-300 px-2 py-1"
-                value={newProjectClient()}
+                value={newProjectClientId()}
                 onChange={(e: any) =>
-                  setNewProjectClient(e.currentTarget.value)
+                  setNewProjectClientId(e.currentTarget.value)
                 }
               >
                 <option value="">Select a client (optional)</option>
                 <For each={clients()}>
-                  {(client: ClientEntry) => (
-                    <option value={client.name}>{client.name}</option>
+                  {(client: Client) => (
+                    <option value={client.id}>{client.name}</option>
                   )}
                 </For>
               </select>
@@ -387,18 +427,16 @@ function App() {
       )}
 
       {/* Task history */}
-      {taskHistory().length > 0 && (
+      {getTaskHisotryEntries().length > 0 && (
         <div class="mt-8">
           <h3 class="mb-2 text-xl font-bold">Task History</h3>
           <ul class="list-disc pl-6">
-            <For each={taskHistory()}>
+            <For each={getTaskHisotryEntries()}>
               {(task: TaskHistoryEntry) => (
                 <li class="mb-2">
-                  {task.clientName} - {task.projectName} - {task.taskName}:{" "}
+                  {task.clientName} - {task.projectName} - {task.name}:{" "}
                   {task.duration} (from {task.startTime} to {task.endTime}){" "}
-                  {task.billable
-                    ? `(Billable at ${task.billableRate} THB/hour)`
-                    : ""}
+                  {task.billable ? `(Billable)` : ""}
                 </li>
               )}
             </For>
@@ -408,6 +446,13 @@ function App() {
 
       {/* Report */}
       {taskHistory().length > 0 && <Report reportData={generateReportData()} />}
+      {/* reset data button */}
+      <button
+        class="mt-4 block rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-600"
+        onClick={resetDatabase}
+      >
+        Reset Data
+      </button>
     </div>
   )
 }

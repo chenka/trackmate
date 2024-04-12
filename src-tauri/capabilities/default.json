@@ -12,8 +12,12 @@
     "resources:default",
     "menu:default",
     "tray:default",
-    "shell:allow-open",
     "tray:allow-new",
-    "tray:allow-set-title"
+    "tray:allow-set-title",
+    "shell:allow-open",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "store:allow-clear"
   ]
 }
