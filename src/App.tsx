@@ -451,12 +451,42 @@ function App() {
         <div class="mt-8">
           <h3 class="mb-2 text-xl font-bold">Task History</h3>
           <ul class="list-disc pl-6">
-            <For each={getTaskHisotryEntries()}>
+            <For
+              each={getTaskHisotryEntries().sort((a, b) => {
+                // sort by end time from DESC to ASC
+                return (
+                  new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
+                )
+              })}
+            >
               {(task: TaskHistoryEntry) => (
-                <li class="mb-2">
-                  {task.clientName} - {task.projectName} - {task.name}:{" "}
-                  {task.duration} (from {task.startTime} to {task.endTime}){" "}
-                  {task.billable ? `💰` : ""}
+                <li class="mb-2 flex items-center gap-2 text-sm ">
+                  <span class="font-medium">{task.name} - </span>
+                  <span class="font-medium text-green-600">
+                    {task.projectName} -{" "}
+                  </span>
+                  <span class="font-medium text-gray-500">
+                    {task.clientName}
+                  </span>
+                  <span class="">
+                    {/* Show time in format 17:03 - 17:10 */}
+                    {task.duration} (
+                    {new Date(task.startTime).toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
+                    -{" "}
+                    {new Date(task.endTime).toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
+                    )
+                  </span>
+                  {task.billable ? (
+                    <span class="text-green-500">💰</span>
+                  ) : null}
                 </li>
               )}
             </For>
@@ -469,7 +499,13 @@ function App() {
       {/* reset data button */}
       <button
         class="mt-4 block rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-600"
-        onClick={resetDatabase}
+        onClick={() => {
+          // display confirm dialog to confirm before delete database
+          if (!confirm("Are you sure you want to delete all data?")) {
+            return
+          }
+          resetDatabase()
+        }}
       >
         Reset Data
       </button>
