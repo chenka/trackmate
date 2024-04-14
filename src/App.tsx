@@ -291,8 +291,10 @@ function App() {
   })
 
   return (
-    <div class="container mx-auto p-4 bg-white">
-      <h1 class="mb-4 text-center text-3xl font-bold">Time Tracker</h1>
+    <div class="bg-purple-900 text-white min-h-screen p-6">
+      <div class="flex items-center justify-center mb-6">
+        <h2 class="text-4xl font-bold">{formatTime(time())}</h2>
+      </div>
 
       {/* Current task */}
       {currentTask() && (
@@ -302,14 +304,12 @@ function App() {
         </h2>
       )}
 
-      <p class="mb-4 text-lg">Time: {formatTime(time())}</p>
-
       {/* Task input */}
       {!timerId() && (
-        <div class="mb-4">
+        <div class="mb-4 bg-purple-800 p-4 rounded-lg">
           <label class="mb-2 block font-bold">Client</label>
           <select
-            class="mb-4 w-full rounded border border-gray-300 px-2 py-1"
+            class="mb-4 w-full rounded border border-gray-300 px-2 py-1 text-black"
             value={selectedClient()}
             onChange={(e: any) => setSelectedClient(e.currentTarget.value)}
           >
@@ -323,7 +323,7 @@ function App() {
 
           <label class="mb-2 block font-bold">Project</label>
           <select
-            class="mb-4 w-full rounded border border-gray-300 px-2 py-1"
+            class="mb-4 w-full rounded border border-gray-300 px-2 py-1 text-black"
             value={selectedProject()}
             onChange={(e: any) => setSelectedProject(e.currentTarget.value)}
           >
@@ -338,33 +338,34 @@ function App() {
           <label class="mb-2 block font-bold">Task Name</label>
           <input
             type="text"
-            class="mb-4 w-full rounded border border-gray-300 px-2 py-1"
+            class="mb-4 w-full rounded border border-gray-300 px-2 py-1 text-black"
             placeholder="Enter task name"
             value={taskName()}
             onInput={(e: any) => setTaskName(e.currentTarget.value)}
             onKeyDown={(e: any) => handleKeyDown(e)}
           />
+
+          <div class="flex justify-center my-8">
+            <button
+              onClick={toggleTimer}
+              class="bg-white text-purple-900 px-6 py-2 rounded-full font-semibold hover:bg-purple-100 active:bg-purple-200"
+            >
+              {timerId() ? "Stop" : "Start"}
+            </button>
+          </div>
         </div>
       )}
-
-      {/* Timer button */}
-      <button
-        class="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
-        onClick={toggleTimer}
-      >
-        {timerId() ? "Stop Tracking" : "Start Tracking"}
-      </button>
 
       {/* Project and client creation */}
       {!timerId() && (
         <>
           <div class="mt-8">
-            <h3 class="mb-4 text-xl font-bold">Create Project</h3>
-            <div class="mb-4">
+            <h3 class="text-xl font-semibold mb-4">Create Project</h3>
+            <div class="bg-purple-800 p-4 rounded-lg mb-6">
               <label class="mb-2 block font-bold">Project Name</label>
               <input
                 type="text"
-                class="mb-4 w-full rounded border border-gray-300 px-2 py-1"
+                class="mb-4 w-full rounded border border-gray-300 px-2 py-1 text-black"
                 placeholder="Enter project name"
                 value={newProjectName()}
                 onInput={(e: any) => setNewProjectName(e.currentTarget.value)}
@@ -372,7 +373,7 @@ function App() {
 
               <label class="mb-2 block font-bold">Client (Optional)</label>
               <select
-                class="mb-4 w-full rounded border border-gray-300 px-2 py-1"
+                class="mb-4 w-full rounded border border-gray-300 px-2 py-1 text-black"
                 value={newProjectClientId()}
                 onChange={(e: any) =>
                   setNewProjectClientId(e.currentTarget.value)
@@ -389,7 +390,7 @@ function App() {
               <label class="inline-flex items-center">
                 <input
                   type="checkbox"
-                  class="form-checkbox"
+                  class="form-checkbox text-black"
                   checked={newProjectBillable()}
                   onChange={() => setNewProjectBillable(!newProjectBillable())}
                 />
@@ -423,7 +424,7 @@ function App() {
             </div>
           </div>
 
-          <div class="mt-8">
+          <div class="mt-8 bg-purple-800 p-4 rounded-lg">
             <h3 class="mb-4 text-xl font-bold">Create Client</h3>
             <div class="mb-4">
               <label class="mb-2 block font-bold">Client Name</label>
@@ -448,49 +449,63 @@ function App() {
 
       {/* Task history */}
       {getTaskHisotryEntries().length > 0 && (
-        <div class="mt-8">
+        <div class="mt-8 bg-purple-800 p-4 rounded-lg">
           <h3 class="mb-2 text-xl font-bold">Task History</h3>
-          <ul class="list-disc pl-6">
-            <For
-              each={getTaskHisotryEntries().sort((a, b) => {
-                // sort by end time from DESC to ASC
-                return (
-                  new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
-                )
-              })}
-            >
-              {(task: TaskHistoryEntry) => (
-                <li class="mb-2 flex items-center gap-2 text-sm ">
-                  <span class="font-medium">{task.name} - </span>
-                  <span class="font-medium text-green-600">
-                    {task.projectName} -{" "}
-                  </span>
-                  <span class="font-medium text-gray-500">
-                    {task.clientName}
-                  </span>
-                  <span class="">
-                    {/* Show time in format 17:03 - 17:10 */}
-                    {task.duration} (
-                    {new Date(task.startTime).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
-                    -{" "}
-                    {new Date(task.endTime).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
-                    )
-                  </span>
-                  {task.billable ? (
-                    <span class="text-green-500">💰</span>
-                  ) : null}
-                </li>
-              )}
-            </For>
-          </ul>
+
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-purple-700">
+                <th class="py-2 px-4">Task</th>
+                <th class="py-2 px-4">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <For
+                each={getTaskHisotryEntries().sort((a, b) => {
+                  // sort by end time from DESC to ASC
+                  return (
+                    new Date(b.endTime).getTime() -
+                    new Date(a.endTime).getTime()
+                  )
+                })}
+              >
+                {(task: TaskHistoryEntry) => (
+                  <tr>
+                    <td class="py-2 px-4">
+                      {" "}
+                      <span class="font-medium">{task.name} - </span>
+                      <span class="font-medium text-green-600">
+                        {task.projectName} -{" "}
+                      </span>
+                      <span class="font-medium text-gray-500">
+                        {task.clientName}
+                      </span>
+                      {task.billable ? (
+                        <span class="text-green-500">💰</span>
+                      ) : null}
+                    </td>
+                    <td class="py-2 px-4">
+                      <div class="">
+                        <div>{task.duration}</div>(
+                        {new Date(task.startTime).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}
+                        -{" "}
+                        {new Date(task.endTime).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}
+                        )
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </For>
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -536,7 +551,7 @@ const Report = (props: { reportData: ReportEntry[] }) => {
                 <td class="border px-4 py-2">{entry.taskCount}</td>
                 <td class="border px-4 py-2">{entry.totalDuration}</td>
                 <td class="border px-4 py-2">
-                  {entry.totalAmount.toFixed(2)} THB
+                  {entry.totalAmount.toFixed(0)} THB
                 </td>
               </tr>
             )}
