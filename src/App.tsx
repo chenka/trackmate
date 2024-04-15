@@ -344,17 +344,16 @@ function App() {
             onInput={(e: any) => setTaskName(e.currentTarget.value)}
             onKeyDown={(e: any) => handleKeyDown(e)}
           />
-
-          <div class="flex justify-center my-8">
-            <button
-              onClick={toggleTimer}
-              class="bg-white text-purple-900 px-6 py-2 rounded-full font-semibold hover:bg-purple-100 active:bg-purple-200"
-            >
-              {timerId() ? "Stop" : "Start"}
-            </button>
-          </div>
         </div>
       )}
+      <div class="flex justify-center my-8">
+        <button
+          onClick={toggleTimer}
+          class="bg-white text-purple-900 px-6 py-2 rounded-full font-semibold hover:bg-purple-100 active:bg-purple-200"
+        >
+          {timerId() ? "Stop" : "Start"}
+        </button>
+      </div>
 
       {/* Project and client creation */}
       {!timerId() && (
@@ -424,8 +423,8 @@ function App() {
             </div>
           </div>
 
-          <div class="mt-8 bg-purple-800 p-4 rounded-lg">
-            <h3 class="mb-4 text-xl font-bold">Create Client</h3>
+          <h3 class="text-xl mt-8 font-semibold mb-4">Create Client</h3>
+          <div class="mt-2 bg-purple-800 p-4 rounded-lg">
             <div class="mb-4">
               <label class="mb-2 block font-bold">Client Name</label>
               <input
@@ -448,66 +447,37 @@ function App() {
       )}
 
       {/* Task history */}
-      {getTaskHisotryEntries().length > 0 && (
-        <div class="mt-8 bg-purple-800 p-4 rounded-lg">
-          <h3 class="mb-2 text-xl font-bold">Task History</h3>
-
-          <table class="w-full text-left">
-            <thead>
-              <tr class="bg-purple-700">
-                <th class="py-2 px-4">Task</th>
-                <th class="py-2 px-4">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              <For
-                each={getTaskHisotryEntries().sort((a, b) => {
-                  // sort by end time from DESC to ASC
-                  return (
-                    new Date(b.endTime).getTime() -
-                    new Date(a.endTime).getTime()
-                  )
-                })}
-              >
+      <h3 class="text-xl font-semibold mt-8 mb-4">Task History</h3>
+      <For
+        each={Object.entries(
+          groupTaskHistoryByDate(getTaskHisotryEntries())
+        ).reverse()}
+      >
+        {([date, tasks]: [string, TaskHistoryEntry[]]) => (
+          <div class="mb-8">
+            <h3 class="text-xl font-bold mb-2">{date}</h3>
+            <div class="bg-purple-800 p-4 rounded-lg">
+              <For each={tasks}>
                 {(task: TaskHistoryEntry) => (
-                  <tr>
-                    <td class="py-2 px-4">
-                      {" "}
-                      <span class="font-medium">{task.name} - </span>
-                      <span class="font-medium text-green-600">
-                        {task.projectName} -{" "}
-                      </span>
-                      <span class="font-medium text-gray-500">
-                        {task.clientName}
-                      </span>
-                      {task.billable ? (
-                        <span class="text-green-500">💰</span>
-                      ) : null}
-                    </td>
-                    <td class="py-2 px-4">
-                      <div class="">
-                        <div>{task.duration}</div>(
-                        {new Date(task.startTime).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })}
-                        -{" "}
-                        {new Date(task.endTime).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })}
-                        )
-                      </div>
-                    </td>
-                  </tr>
+                  <div class="flex justify-between mb-2">
+                    <span>
+                      {task.name} - {task.projectName} - {task.clientName}
+                      {task.billable && (
+                        <span class="text-green-500 ml-2">💰</span>
+                      )}
+                    </span>
+                    <span>{task.duration}</span>
+                  </div>
                 )}
               </For>
-            </tbody>
-          </table>
-        </div>
-      )}
+              <div class="flex justify-between">
+                <span>{date}</span>
+                {/* <span>{formatTotalDuration(tasks)}</span> */}
+              </div>
+            </div>
+          </div>
+        )}
+      </For>
 
       {/* Report */}
       {taskHistory().length > 0 && <Report reportData={generateReportData()} />}
@@ -526,6 +496,29 @@ function App() {
       </button>
     </div>
   )
+}
+
+function groupTaskHistoryByDate(
+  taskHistory: TaskHistoryEntry[]
+): Record<string, TaskHistoryEntry[]> {
+  const groupedTasks: Record<string, TaskHistoryEntry[]> = {}
+
+  for (const task of taskHistory) {
+    const date = new Date(task.startTime).toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+
+    if (groupedTasks[date]) {
+      groupedTasks[date].push(task)
+    } else {
+      groupedTasks[date] = [task]
+    }
+  }
+
+  return groupedTasks
 }
 
 const Report = (props: { reportData: ReportEntry[] }) => {
