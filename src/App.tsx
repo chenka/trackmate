@@ -470,10 +470,6 @@ function App() {
                   </div>
                 )}
               </For>
-              <div class="flex justify-between">
-                <span>{date}</span>
-                {/* <span>{formatTotalDuration(tasks)}</span> */}
-              </div>
             </div>
           </div>
         )}
