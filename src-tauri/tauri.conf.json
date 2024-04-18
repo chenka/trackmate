@@ -1,7 +1,7 @@
 {
   "productName": "trackmate",
   "version": "0.0.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.trackmateapp",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
