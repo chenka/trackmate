@@ -4,7 +4,7 @@ This template should help get you started developing with Tauri, Solid and Types
 
 ## TODODS
 
-[] Register trackmateapp.com
+[ ] Register trackmateapp.com
 
 ## Recommended IDE Setup
 
