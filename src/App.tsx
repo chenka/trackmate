@@ -403,7 +403,7 @@ function App() {
                   </label>
                   <input
                     type="number"
-                    class="w-full rounded border border-gray-300 px-2 py-1"
+                    class="w-full rounded border border-gray-300 px-2 py-1 text-black"
                     value={newProjectBillableRate()}
                     onInput={(e: any) =>
                       setNewProjectBillableRate(
@@ -429,7 +429,7 @@ function App() {
               <label class="mb-2 block font-bold">Client Name</label>
               <input
                 type="text"
-                class="mb-4 w-full rounded border border-gray-300 px-2 py-1"
+                class="mb-4 w-full rounded border border-gray-300 px-2 py-1 text-black"
                 placeholder="Enter client name"
                 value={newClientName()}
                 onInput={(e: any) => setNewClientName(e.currentTarget.value)}
