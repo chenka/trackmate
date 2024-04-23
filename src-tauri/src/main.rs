@@ -4,10 +4,8 @@
 mod tray;
 use tauri::{
     image::Image,
-    menu::{MenuBuilder, MenuItemBuilder},
     tray::{ClickType, TrayIconBuilder},
-    webview::{PageLoadEvent, WebviewWindowBuilder},
-    App, AppHandle, Manager, RunEvent, Runtime, WebviewUrl,
+    Manager, Runtime,
 };
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
