@@ -1,6 +1,8 @@
 import { createSignal, onCleanup, For } from "solid-js"
 import { TrayIcon } from "@tauri-apps/api/tray"
 import {} from "@tauri-apps/api/app"
+import { getCurrent } from "@tauri-apps/api/window"
+
 import {
   Client,
   Project,
@@ -179,8 +181,13 @@ function App() {
     const _trayIcon = await TrayIcon.new({
       id: "timer",
       title: "[00:00:00]",
-      action: (event) => console.log(event),
+      action: (event) => {
+        if (event.clickType === "Left") {
+          getCurrent().setFocus()
+        }
+      },
     }).catch(console.error)
+
     if (_trayIcon) {
       setTrayIcon(_trayIcon)
     }
