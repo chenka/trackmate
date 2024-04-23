@@ -1,7 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#[cfg(any(feature = "image-ico", feature = "image-png"))]
-mod tray;
 use tauri::{
     image::Image,
     tray::{ClickType, TrayIconBuilder},
