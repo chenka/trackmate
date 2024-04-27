@@ -17,6 +17,7 @@ pub struct AppMenu<R: Runtime>(pub std::sync::Mutex<Option<tauri::menu::Menu<R>>
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let image = Image::from_path("./icons/icon.png").unwrap();
             let _tray = TrayIconBuilder::new()

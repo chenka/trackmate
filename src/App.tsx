@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, For } from "solid-js"
 import { TrayIcon } from "@tauri-apps/api/tray"
-import {} from "@tauri-apps/api/app"
+import { confirm } from "@tauri-apps/plugin-dialog"
 import { getCurrent } from "@tauri-apps/api/window"
 
 import {
@@ -16,6 +16,7 @@ import {
   getTasks,
   resetDatabase,
 } from "./store"
+import Timer from "./lib/timer"
 // Type definitions
 type TaskHistoryEntry = {
   id: string
@@ -37,25 +38,14 @@ type ReportEntry = {
   totalAmount: number
 }
 
-const formatTime = (time: number): string => {
-  const hours = Math.floor(time / 3600)
-  const minutes = Math.floor((time % 3600) / 60)
-  const seconds = time % 60
-  return `${hours.toString().padStart(2, "0")}:${minutes
-    .toString()
-    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-}
-
 function App() {
-  // State variables
-  const [time, setTime] = createSignal<number>(0)
   const [timerId, setTimerId] = createSignal<number | null>(null)
+  const [timerDuration, setTimerDuration] = createSignal<string>("00:00:00")
   const [trayIcon, setTrayIcon] = createSignal<null | TrayIcon>(null)
   const [selectedClient, setSelectedClient] = createSignal<string>("")
   const [selectedProject, setSelectedProject] = createSignal<string>("")
   const [taskName, setTaskName] = createSignal<string>("")
   const [currentTask, setCurrentTask] = createSignal<string>("")
-  const [startTime, setStartTime] = createSignal<Date>(new Date())
   const [taskHistory, setTaskHistory] = createSignal<Task[]>([])
   const [projects, setProjects] = createSignal<Project[]>([])
   const [clients, setClients] = createSignal<Client[]>([])
@@ -66,6 +56,7 @@ function App() {
   const [newProjectBillableRate, setNewProjectBillableRate] =
     createSignal<number>(0)
   const [newClientName, setNewClientName] = createSignal<string>("")
+  const timer = new Timer()
 
   getClients().then((data) => {
     console.log("client", data)
@@ -93,7 +84,7 @@ function App() {
   const formatDuration = (durationInSeconds: number): string => {
     const hours = Math.floor(durationInSeconds / 3600)
     const minutes = Math.floor((durationInSeconds % 3600) / 60)
-    const seconds = durationInSeconds % 60
+    const seconds = Math.floor(durationInSeconds % 60)
     return `[${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}]`
@@ -139,30 +130,34 @@ function App() {
     //   return
     // }
     setCurrentTask(taskName())
-    setStartTime(new Date())
     const id = setInterval(() => {
-      setTime((prev) => prev + 1)
-      const title = `${taskName()} ${formatDuration(time())}`
+      const duration = timer.getTime()
+      setTimerDuration(duration)
+
+      const title = `${taskName()} ${timerDuration()}`
       trayIcon()?.setTitle(title)
     }, 1000)
     setTimerId(id)
+    timer.start()
   }
 
   const stopTimer = async (): Promise<void> => {
     if (trayIcon()) {
       await trayIcon()?.close()
     }
-    const duration = time()
-    const endTime = new Date(startTime().getTime() + duration * 1000)
+    timer.stop()
+
     clearInterval(timerId() as number)
     const selectedProjectData = projects().find(
       (project) => project.name === selectedProject()
     )
+    console.log(timer.getStartTime(), "getStartTime")
+    console.log(timer.getEndTime(), "getEndTime")
     await createTask({
       id: generateID(),
       name: currentTask(),
-      startTime: startTime().toISOString(),
-      endTime: endTime.toISOString(),
+      startTime: timer.getStartTime() || "",
+      endTime: timer.getEndTime() || "",
       clientId: selectedProjectData?.clientId || "",
       projectId: selectedProjectData?.id || "",
     })
@@ -170,7 +165,9 @@ function App() {
     setTaskHistory(tasks)
     setTimerId(null)
     setCurrentTask("")
-    setTime(0)
+
+    timer.reset()
+    setTimerDuration(timer.getTime())
   }
 
   const toggleTimer = (): void => {
@@ -300,7 +297,7 @@ function App() {
   return (
     <div class="bg-purple-900 text-white min-h-screen p-6">
       <div class="flex items-center justify-center mb-6">
-        <h2 class="text-4xl font-bold">{formatTime(time())}</h2>
+        <h2 class="text-4xl font-bold">{timerDuration()}</h2>
       </div>
 
       {/* Current task */}
@@ -487,12 +484,14 @@ function App() {
       {/* reset data button */}
       <button
         class="mt-4 block rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-600"
-        onClick={() => {
-          // display confirm dialog to confirm before delete database
-          if (!confirm("Are you sure you want to delete all data?")) {
-            return
+        onClick={async () => {
+          const yes = await confirm(
+            "Are you sure you want to delete all data?",
+            { kind: "warning" }
+          )
+          if (yes) {
+            resetDatabase()
           }
-          resetDatabase()
         }}
       >
         Reset Data
